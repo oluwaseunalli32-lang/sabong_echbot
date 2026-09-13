@@ -1,6 +1,5 @@
 import os
 import logging
-from aiohttp import web
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -13,7 +12,6 @@ from telegram.ext import (
 # Configuration
 # -------------------------------------------------------------------
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-PORT = int(os.environ.get("PORT", 10000))  # Render injects $PORT
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -21,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------
-# Text Content (unchanged — keep all your existing Khmer strings)
+# Text Content (Khmer) - Keep all your existing content
 # -------------------------------------------------------------------
 WELCOME_TEXT = (
     "🐔 សូមស្វាគមន៍មកកាន់ Chicken Care\n\n"
@@ -155,49 +153,21 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
 
 # -------------------------------------------------------------------
-# Tiny HTTP health server (keeps Render happy)
-# -------------------------------------------------------------------
-async def health(request):
-    return web.Response(text="Chicken Care Khmer bot is running.")
-
-async def run_health_server():
-    app = web.Application()
-    app.router.add_get("/", health)
-    app.router.add_get("/health", health)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", PORT)
-    await site.start()
-    logger.info(f"Health server listening on port {PORT}")
-
-# -------------------------------------------------------------------
 # Main
 # -------------------------------------------------------------------
-async def main() -> None:
+def main() -> None:
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN environment variable not set!")
         return
 
-    # Start health server FIRST so Render sees an open port quickly
-    await run_health_server()
-
-    # Build the bot application
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("about", about_command))
     application.add_handler(CallbackQueryHandler(menu_callback))
 
-    # Initialize and start polling
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling()
-
-    logger.info("Bot is running with polling + health server.")
-    # Keep the loop alive forever
-    import asyncio
-    await asyncio.Event().wait()
+    logger.info("Bot is starting...")
+    application.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
