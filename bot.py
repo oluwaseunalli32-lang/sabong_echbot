@@ -1,5 +1,6 @@
 import os
 import logging
+from aiohttp import web
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -11,26 +12,23 @@ from telegram.ext import (
 # -------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------
-# The token is read from an environment variable for security.
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+PORT = int(os.environ.get("PORT", 10000))  # Render injects $PORT
 
-# Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------
-# Text Content (Khmer)
+# Text Content (unchanged — keep all your existing Khmer strings)
 # -------------------------------------------------------------------
-# Main menu text
 WELCOME_TEXT = (
     "🐔 សូមស្វាគមន៍មកកាន់ Chicken Care\n\n"
     "Learn practical information about chicken care, feeding, housing, hygiene and general poultry health.\n\n"
     "សូមជ្រើសរើសផ្នែកដែលអ្នកចង់ដឹង:"
 )
 
-# Content for each section
 CARE_TEXT = (
     "🐔 **ការថែទាំមាន់**\n\n"
     "ការថែទាំមាន់ប្រចាំថ្ងៃគឺសំខាន់ណាស់សម្រាប់សុខភាព និងផលិតភាពរបស់ពួកវា។ ខាងក្រោមនេះជាការណែនាំមូលដ្ឋាន៖\n\n"
@@ -86,10 +84,9 @@ ABOUT_TEXT = (
 )
 
 # -------------------------------------------------------------------
-# Keyboard Layouts
+# Keyboards
 # -------------------------------------------------------------------
 def get_main_menu_keyboard():
-    """Returns the main menu inline keyboard."""
     keyboard = [
         [InlineKeyboardButton("🐔 ការថែទាំមាន់", callback_data="menu_care")],
         [InlineKeyboardButton("🌾 អាហារ និងចំណី", callback_data="menu_feed")],
@@ -101,7 +98,6 @@ def get_main_menu_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 def get_back_keyboard():
-    """Returns a keyboard with a single 'Back to Menu' button."""
     keyboard = [
         [InlineKeyboardButton("⬅️ ត្រឡប់ទៅម៉ឺនុយ", callback_data="back_to_menu")]
     ]
@@ -111,102 +107,97 @@ def get_back_keyboard():
 # Command Handlers
 # -------------------------------------------------------------------
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends the main menu when /start is issued."""
     await update.message.reply_text(
-        WELCOME_TEXT,
-        reply_markup=get_main_menu_keyboard(),
-        parse_mode="Markdown",
+        WELCOME_TEXT, reply_markup=get_main_menu_keyboard(), parse_mode="Markdown"
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends a help message when /help is issued."""
     help_text = (
         "📖 **របៀបប្រើប្រាស់បូត**\n\n"
         "បូតនេះផ្តល់ព័ត៌មានអប់រំអំពីការថែទាំមាន់។\n\n"
         "• ប្រើ `/start` ដើម្បីបើកម៉ឺនុយមេ។\n"
         "• ចុចលើប៊ូតុងណាមួយដើម្បីមើលព័ត៌មានលម្អិត។\n"
-        "• ចុចប៊ូតុង **⬅️ ត្រឡប់ទៅម៉ឺនុយ** ដើម្បីត្រឡប់ទៅម៉ឺនុយមេវិញ។\n\n"
-        "ប្រសិនបើអ្នកមានសំណួរ សូមប្រើប្រាស់ម៉ឺនុយដើម្បីស្វែងរកព័ត៌មានដែលអ្នកចង់ដឹង។"
+        "• ចុចប៊ូតុង **⬅️ ត្រឡប់ទៅម៉ឺនុយ** ដើម្បីត្រឡប់ទៅម៉ឺនុយមេវិញ។"
     )
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends the about message when /about is issued."""
     await update.message.reply_text(ABOUT_TEXT, parse_mode="Markdown")
 
 # -------------------------------------------------------------------
-# Callback Query Handlers
+# Callback Handler
 # -------------------------------------------------------------------
 async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles all inline button presses."""
     query = update.callback_query
-    # Always answer the callback query to prevent the loading spinner.
     await query.answer()
-
     data = query.data
 
     if data == "back_to_menu":
-        # Edit the message back to the main menu
         await query.edit_message_text(
-            WELCOME_TEXT,
-            reply_markup=get_main_menu_keyboard(),
-            parse_mode="Markdown",
+            WELCOME_TEXT, reply_markup=get_main_menu_keyboard(), parse_mode="Markdown"
         )
     elif data == "menu_care":
-        await query.edit_message_text(
-            CARE_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown"
-        )
+        await query.edit_message_text(CARE_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown")
     elif data == "menu_feed":
-        await query.edit_message_text(
-            FEED_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown"
-        )
+        await query.edit_message_text(FEED_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown")
     elif data == "menu_housing":
-        await query.edit_message_text(
-            HOUSING_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown"
-        )
+        await query.edit_message_text(HOUSING_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown")
     elif data == "menu_health":
-        await query.edit_message_text(
-            HEALTH_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown"
-        )
+        await query.edit_message_text(HEALTH_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown")
     elif data == "menu_facts":
-        await query.edit_message_text(
-            FACTS_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown"
-        )
+        await query.edit_message_text(FACTS_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown")
     elif data == "menu_about":
-        await query.edit_message_text(
-            ABOUT_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown"
-        )
+        await query.edit_message_text(ABOUT_TEXT, reply_markup=get_back_keyboard(), parse_mode="Markdown")
     else:
-        # Fallback for any unknown callback data
         await query.edit_message_text(
             "សូមអភ័យទោស សូមចុច /start ដើម្បីចាប់ផ្តើមឡើងវិញ。",
-            reply_markup=get_back_keyboard(),
-            parse_mode="Markdown",
+            reply_markup=get_back_keyboard(), parse_mode="Markdown",
         )
 
 # -------------------------------------------------------------------
-# Main Application
+# Tiny HTTP health server (keeps Render happy)
 # -------------------------------------------------------------------
-def main() -> None:
-    """Starts the bot."""
+async def health(request):
+    return web.Response(text="Chicken Care Khmer bot is running.")
+
+async def run_health_server():
+    app = web.Application()
+    app.router.add_get("/", health)
+    app.router.add_get("/health", health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", PORT)
+    await site.start()
+    logger.info(f"Health server listening on port {PORT}")
+
+# -------------------------------------------------------------------
+# Main
+# -------------------------------------------------------------------
+async def main() -> None:
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN environment variable not set!")
         return
 
-    # Create the Application and pass it your bot's token.
-    application = Application.builder().token(TOKEN).build()
+    # Start health server FIRST so Render sees an open port quickly
+    await run_health_server()
 
-    # Register command handlers
+    # Build the bot application
+    application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("about", about_command))
-
-    # Register the callback query handler
     application.add_handler(CallbackQueryHandler(menu_callback))
 
-    # Run the bot until the user presses Ctrl-C
-    logger.info("Bot is starting...")
-    application.run_polling()
+    # Initialize and start polling
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+
+    logger.info("Bot is running with polling + health server.")
+    # Keep the loop alive forever
+    import asyncio
+    await asyncio.Event().wait()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
