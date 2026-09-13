@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: chicken-care-khmer-bot
+    env: python
+    region: singapore # Choose the region closest to your users
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false # This means you will set the value manually in the Render dashboard
